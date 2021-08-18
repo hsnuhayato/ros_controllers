@@ -107,7 +107,8 @@ struct InitJointTrajectoryOptions
       default_tolerances(nullptr),
       other_time_base(nullptr),
       allow_partial_joints_goal(false),
-      error_string(nullptr)
+      error_string(nullptr),
+      vel_limits(nullptr)
   {}
 
   Trajectory*                current_trajectory;
@@ -118,6 +119,7 @@ struct InitJointTrajectoryOptions
   ros::Time*                 other_time_base;
   bool                       allow_partial_joints_goal;
   std::string*               error_string;
+  std::vector<double>*       vel_limits;
 
   void setErrorString(const std::string &msg) const
   {
@@ -202,7 +204,7 @@ bool isNotEmpty(typename Trajectory::value_type trajPerJoint)
 // TODO: Return useful bits of current trajectory if input msg is useless?
 template <class Trajectory>
 Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg,
-                               const ros::Time&                              time,
+                               const ros::Time&                              time, //time is next_update_time
                                const InitJointTrajectoryOptions<Trajectory>& options =
                                InitJointTrajectoryOptions<Trajectory>())
 {
@@ -388,6 +390,86 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
   else
     result_traj.resize(joint_names.size());
 
+  /////////for adjust time from start/////////
+  // Bridge current trajectory to new one
+  bool adjust_time_from_start = false;
+  Scalar extend_duration = 0;
+  if (has_current_trajectory)
+  {
+    for (unsigned int msg_joint_it=0; msg_joint_it < mapping_vector.size();msg_joint_it++)
+    {
+      std::vector<trajectory_msgs::JointTrajectoryPoint>::const_iterator it = msg_it;
+      if (!isValid(*it, it->positions.size()))
+        throw(std::invalid_argument("Size mismatch in trajectory point position, velocity or acceleration data."));
+
+      unsigned int joint_id = mapping_vector[msg_joint_it];
+
+      // Initialize offsets due to wrapping joints to zero
+      std::vector<Scalar> position_offset(1, 0.0);
+      const TrajectoryPerJoint& curr_joint_traj = (*options.current_trajectory)[joint_id];
+
+      // Get the last time and state that will be executed from the current trajectory
+      const typename Segment::Time last_curr_time = std::max(o_msg_start_time.toSec(), o_time.toSec()); // Important!  if duration is minus, than return o_time(=next_update_uptime)
+      typename Segment::State last_curr_state;
+      sample(curr_joint_traj, last_curr_time, last_curr_state);// state on next_update_uptime
+
+      // Get the first time and state that will be executed from the new trajectory
+      trajectory_msgs::JointTrajectoryPoint point_per_joint;
+      if (!it->positions.empty())     {point_per_joint.positions.resize(1, it->positions[msg_joint_it]);}
+      if (!it->velocities.empty())    {point_per_joint.velocities.resize(1, it->velocities[msg_joint_it]);}
+      if (!it->accelerations.empty()) {point_per_joint.accelerations.resize(1, it->accelerations[msg_joint_it]);}
+      point_per_joint.time_from_start = it->time_from_start;
+
+      // todo::adjust time_from_start here, and postpone all trajectorypoint in msg after first_new_time
+      const typename Segment::Time first_new_time = o_msg_start_time.toSec() + (it->time_from_start).toSec();
+      typename Segment::State first_new_state(point_per_joint); // Here offsets are not yet applied
+
+      // Compute offsets due to wrapping joints
+      if (has_angle_wraparound)
+      {
+        position_offset[0] = wraparoundJointOffset(last_curr_state.position[0],
+                                                first_new_state.position[0],
+                                                (*options.angle_wraparound)[joint_id]);
+      }
+
+      // Apply offset to first state that will be executed from the new trajectory
+      first_new_state = typename Segment::State(point_per_joint, position_offset); // Now offsets are applied
+
+      // Add useful segments of current trajectory to result
+      {
+        TrajIter first = findSegment(curr_joint_traj, o_time.toSec());   // Currently active segment
+        TrajIter last  = findSegment(curr_joint_traj, last_curr_time); // Segment active when new trajectory starts
+        if (first == curr_joint_traj.end() || last == curr_joint_traj.end())
+        {
+          error_string = "Unexpected error: Could not find segments in current trajectory. Please contact the package maintainer.";
+          ROS_ERROR_STREAM(error_string);
+          options.setErrorString(error_string);
+          return Trajectory();
+        }
+      }
+
+      // Add segment bridging current and new trajectories to result
+      // todo adjust first_new_time
+      Segment bridge_seg(last_curr_time, last_curr_state,
+                         first_new_time, first_new_state);
+
+      // check max velocity
+      ROS_WARN_STREAM("bridgae_seg max vel [" << joint_id << "] " << bridge_seg.max_vel());
+      if (std::fabs(bridge_seg.max_vel()) > (*options.vel_limits)[joint_id]) {
+        adjust_time_from_start = true;
+        // calc possiable adjutsted time from start
+        // keep feasiable min time_from_start_adjusted
+        Scalar old_duration = first_new_time - last_curr_time;
+        Scalar new_duration = bridge_seg.calcDurationUnderVelLimit((*options.vel_limits)[joint_id]);
+        extend_duration = std::max(extend_duration, new_duration - old_duration);
+        ROS_WARN_STREAM("tf origin " <<  (it->time_from_start).toSec());
+        ROS_WARN_STREAM("old duration " << old_duration <<  "new duration " << new_duration << "extend " << extend_duration);
+      }
+    }
+    ROS_WARN_STREAM("extend " << extend_duration);
+  }
+  /////////////////////////////////////////////////////////////////////////////////////
+
   //Iterate through the joints that are in the message, in the order of the mapping vector
   //for (unsigned int joint_id=0; joint_id < joint_names.size();joint_id++)
   for (unsigned int msg_joint_it=0; msg_joint_it < mapping_vector.size();msg_joint_it++)
@@ -414,9 +496,9 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       const TrajectoryPerJoint& curr_joint_traj = (*options.current_trajectory)[joint_id];
 
       // Get the last time and state that will be executed from the current trajectory
-      const typename Segment::Time last_curr_time = std::max(o_msg_start_time.toSec(), o_time.toSec()); // Important!
+      const typename Segment::Time last_curr_time = std::max(o_msg_start_time.toSec(), o_time.toSec()); // Important!  if duration is minus, than return o_time(=next_update_uptime)
       typename Segment::State last_curr_state;
-      sample(curr_joint_traj, last_curr_time, last_curr_state);
+      sample(curr_joint_traj, last_curr_time, last_curr_state);// state on next_update_uptime
 
       // Get the first time and state that will be executed from the new trajectory
       trajectory_msgs::JointTrajectoryPoint point_per_joint;
@@ -425,7 +507,12 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       if (!it->accelerations.empty()) {point_per_joint.accelerations.resize(1, it->accelerations[msg_joint_it]);}
       point_per_joint.time_from_start = it->time_from_start;
 
-      const typename Segment::Time first_new_time = o_msg_start_time.toSec() + (it->time_from_start).toSec();
+      // todo::adjust time_from_start here, and postpone all trajectorypoint in msg after first_new_time
+      typename Segment::Time first_new_time = o_msg_start_time.toSec() + (it->time_from_start).toSec();
+      if (adjust_time_from_start) {
+         first_new_time += extend_duration;
+       }
+
       typename Segment::State first_new_state(point_per_joint); // Here offsets are not yet applied
 
       // Compute offsets due to wrapping joints
@@ -487,7 +574,7 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       if (!next_it->velocities.empty()) {next_it_point_per_joint.velocities.resize(1, next_it->velocities[msg_joint_it]);}
       if (!next_it->accelerations.empty()) {next_it_point_per_joint.accelerations.resize(1, next_it->accelerations[msg_joint_it]);}
       next_it_point_per_joint.time_from_start = next_it->time_from_start;
-
+      // todo::adjust time_from_start
       Segment segment(o_msg_start_time, it_point_per_joint, next_it_point_per_joint, position_offset);
       segment.setGoalHandle(options.rt_goal_handle);
       if (has_rt_goal_handle) {segment.setTolerances(tolerances_per_joint);}
@@ -505,13 +592,15 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       log_str << "\n- 1 segment added for transitioning between the current trajectory and first point of the input message.";
       if (num_new_segments > 0) {log_str << "\n- " << num_new_segments << " new segments (" << (num_new_segments + 1) <<
                                  " points) taken from the input trajectory.";}
+      log_str << "\nres1: " << result_traj_per_joint[0].startTime() << " " <<  result_traj_per_joint[0].endTime() <<
+          "\nres2: " << result_traj_per_joint[1].startTime() << " " <<  result_traj_per_joint[1].endTime();
     }
     else {log_str << ".";}
     ROS_DEBUG_STREAM(log_str.str());
 
     if (result_traj_per_joint.size() > 0)
       result_traj[joint_id] = result_traj_per_joint;
-  }
+  }//////////Iterate through the joints that are in the message, in the order of the mapping vector
 
   // If the trajectory for all joints is empty, empty the trajectory vector
   typename Trajectory::const_iterator trajIter = std::find_if (result_traj.begin(), result_traj.end(), isNotEmpty<Trajectory>);

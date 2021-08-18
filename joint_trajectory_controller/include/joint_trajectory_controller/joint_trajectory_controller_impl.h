@@ -166,6 +166,10 @@ template <class SegmentImpl, class HardwareInterface>
 inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 trajectoryCommandCB(const JointTrajectoryConstPtr& msg)
 {
+  //const auto now = ros::Time::now();
+  //ROS_INFO("The received time is %f and stamp is %f, diff is %f",
+  //         now.toSec(), msg->header.stamp.toSec(), (now - msg->header.stamp).toSec());
+
   const bool update_ok = updateTrajectoryCommand(msg, RealtimeGoalHandlePtr());
   if (update_ok) {preemptActiveGoal();}
 }
@@ -253,6 +257,7 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
 
   // Initialize members
   joints_.resize(n_joints);
+  vel_limits_.resize(n_joints);
   angle_wraparound_.resize(n_joints);
   for (unsigned int i = 0; i < n_joints; ++i)
   {
@@ -269,8 +274,9 @@ bool JointTrajectoryController<SegmentImpl, HardwareInterface>::init(HardwareInt
     angle_wraparound_[i] = urdf_joints[i]->type == urdf::Joint::CONTINUOUS;
     const std::string not_if = angle_wraparound_[i] ? "" : "non-";
 
+    vel_limits_[i] = urdf_joints[i]->limits->velocity;
     ROS_DEBUG_STREAM_NAMED(name_, "Found " << not_if << "continuous joint '" << joint_names_[i] << "' in '" <<
-                                  this->getHardwareInterfaceType() << "'.");
+                          this->getHardwareInterfaceType() << " vel_limit "  << vel_limits_[i] <<  "'.");
   }
 
   assert(joints_.size() == angle_wraparound_.size());
@@ -520,6 +526,7 @@ updateTrajectoryCommand(const JointTrajectoryConstPtr& msg, RealtimeGoalHandlePt
   options.other_time_base           = &next_update_uptime;
   options.current_trajectory        = curr_traj_ptr.get();
   options.joint_names               = &joint_names_;
+  options.vel_limits                = &vel_limits_;
   options.angle_wraparound          = &angle_wraparound_;
   options.rt_goal_handle            = gh;
   options.default_tolerances        = &default_tolerances_;
@@ -824,7 +831,7 @@ JointTrajectoryController<SegmentImpl, HardwareInterface>::createHoldTrajectory(
   {
     default_joint_state.position[0]= default_state.position[i];
     default_joint_state.velocity[0]= default_state.velocity[i];
-    Segment hold_segment(0.0, default_joint_state, 0.0, default_joint_state);
+    Segment hold_segment(0.0, default_joint_state, 0.0, default_joint_state); //start time, start state, end time, end state
 
     TrajectoryPerJoint joint_segment;
     joint_segment.resize(1, hold_segment);
