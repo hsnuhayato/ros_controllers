@@ -265,16 +265,18 @@ void QuinticSplineSegment<ScalarType>::init(const Time&  start_time,
                           *coefs_it);
 
       // compute max vel during this segment
-      if (std::fabs((*coefs_it)[3]) < 1e-9) {
+      if (std::fabs((*coefs_it)[3]) < 1e-9)
+      {
         max_vel_ = (*coefs_it)[1];
       }
-      else if (-(*coefs_it)[2] / (3 * (*coefs_it)[3]) >= duration_ ||
-               -(*coefs_it)[2] / (3 * (*coefs_it)[3]) < 0 ) {
+      else if (-(*coefs_it)[2] / (3 * (*coefs_it)[3]) >= duration_ || -(*coefs_it)[2] / (3 * (*coefs_it)[3]) < 0)
+      {
         max_vel_ = (*coefs_it)[1];
       }
-      else{
-        double max_vel_tmp = (3 * (*coefs_it)[1] * (*coefs_it)[3] - (*coefs_it)[2] * (*coefs_it)[2]) /
-                   (3 * (*coefs_it)[3]);
+      else
+      {
+        double max_vel_tmp =
+            (3 * (*coefs_it)[1] * (*coefs_it)[3] - (*coefs_it)[2] * (*coefs_it)[2]) / (3 * (*coefs_it)[3]);
 
         max_vel_ = std::fabs((*coefs_it)[1]) > std::fabs(max_vel_tmp) ? (*coefs_it)[1] : max_vel_tmp;
       }
@@ -439,68 +441,72 @@ sampleWithTimeBounds(const SplineCoefficients& coefficients, const Scalar& durat
   }
 }
 
-template<class ScalarType>
-ScalarType QuinticSplineSegment<ScalarType>::
-calcDurationUnderVelLimit(const ScalarType& limit)
+template <class ScalarType>
+ScalarType QuinticSplineSegment<ScalarType>::calcDurationUnderVelLimit(const ScalarType& limit)
 {
-  //std::cout << "limit " << limit << " " <<  start_state_.position[0] << " " << start_state_.velocity[0] << " " << end_state_.position[0] << " " << end_state_.velocity[0] << std::endl;
+  // std::cout << "limit " << limit << " " <<  start_state_.position[0] << " " << start_state_.velocity[0] << " " <<
+  // end_state_.position[0] << " " << end_state_.velocity[0] << std::endl;
   ScalarType tf_tmp;
   ScalarType tf_min = 1E9;
-  if (std::fabs(start_state_.velocity[0]) > 1E-6) {// 0 stands for epsilon
-    if (max_vel_ < 0) {
-      tf_tmp = std::pow(3 * start_state_.velocity[0] * -limit -
-                        std::pow(start_state_.velocity[0], 2), -1) *
+  if (std::fabs(start_state_.velocity[0]) > 1E-6)
+  {  // 0 stands for epsilon
+    if (max_vel_ < 0)
+    {
+      tf_tmp = std::pow(3 * start_state_.velocity[0] * -limit - std::pow(start_state_.velocity[0], 2), -1) *
                (std::sqrt(std::pow(limit, 2) + start_state_.velocity[0] * -limit) *
-                (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
+                    (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
                 (3 * start_state_.velocity[0] - 3 * -limit) * start_state_.position[0] +
                 (3 * -limit - 3 * start_state_.velocity[0]) * end_state_.position[0]);
-      //std::cout << "tf_tmp " << tf_tmp << std::endl;
-      if (tf_tmp > duration_) {
+      // std::cout << "tf_tmp " << tf_tmp << std::endl;
+      if (tf_tmp > duration_)
+      {
         tf_min = std::min(tf_tmp, tf_min);
       }
 
-      tf_tmp = -std::pow(3 * start_state_.velocity[0] * -limit -
-                         std::pow(start_state_.velocity[0], 2), -1) *
+      tf_tmp = -std::pow(3 * start_state_.velocity[0] * -limit - std::pow(start_state_.velocity[0], 2), -1) *
                (std::sqrt(std::pow(limit, 2) + start_state_.velocity[0] * -limit) *
-                (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
+                    (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
                 (3 * -limit - 3 * start_state_.velocity[0]) * start_state_.position[0] +
                 (3 * start_state_.velocity[0] - 3 * -limit) * end_state_.position[0]);
-      //std::cout << "tf_tmp " << tf_tmp << std::endl;
-      if (tf_tmp > duration_) {
+      // std::cout << "tf_tmp " << tf_tmp << std::endl;
+      if (tf_tmp > duration_)
+      {
         tf_min = std::min(tf_tmp, tf_min);
       }
     }
 
-    else if (max_vel_ > 0) {
-      tf_tmp = std::pow(3 * start_state_.velocity[0] * limit +
-                        std::pow(start_state_.velocity[0], 2), -1) *
+    else if (max_vel_ > 0)
+    {
+      tf_tmp = std::pow(3 * start_state_.velocity[0] * limit + std::pow(start_state_.velocity[0], 2), -1) *
                (std::sqrt(std::pow(limit, 2) - start_state_.velocity[0] * limit) *
-                (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
+                    (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
                 (-3 * start_state_.velocity[0] - 3 * limit) * start_state_.position[0] +
                 (3 * limit + 3 * start_state_.velocity[0]) * end_state_.position[0]);
-      //std::cout << "tf_tmp " << tf_tmp << std::endl;
-      if (tf_tmp > duration_) {
+      // std::cout << "tf_tmp " << tf_tmp << std::endl;
+      if (tf_tmp > duration_)
+      {
         tf_min = std::min(tf_tmp, tf_min);
       }
 
-      tf_tmp = -std::pow(3 * start_state_.velocity[0] * limit +
-                         std::pow(start_state_.velocity[0], 2), -1) *
+      tf_tmp = -std::pow(3 * start_state_.velocity[0] * limit + std::pow(start_state_.velocity[0], 2), -1) *
                (std::sqrt(std::pow(limit, 2) - start_state_.velocity[0] * limit) *
-                (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
+                    (3 * start_state_.position[0] - 3 * end_state_.position[0]) +
                 (3 * limit + 3 * start_state_.velocity[0]) * start_state_.position[0] +
                 ((-3 * limit) - 3 * start_state_.velocity[0]) * end_state_.position[0]);
-      //std::cout << "tf_tmp " << tf_tmp << std::endl;
-      if (tf_tmp > duration_) {
+      // std::cout << "tf_tmp " << tf_tmp << std::endl;
+      if (tf_tmp > duration_)
+      {
         tf_min = std::min(tf_tmp, tf_min);
       }
     }
   }
-  else {
+  else
+  {
     tf_tmp = std::fabs((3 * start_state_.position[0] - 3 * end_state_.position[0]) / 2.0 / limit);
-    //std::cout << "tf_tmp " << tf_tmp << std::endl;
+    // std::cout << "tf_tmp " << tf_tmp << std::endl;
     tf_min = tf_tmp;
   }
-  //std::cout << "return tf " << tf_min << std::endl;
+  // std::cout << "return tf " << tf_min << std::endl;
   return tf_min;
 }
 

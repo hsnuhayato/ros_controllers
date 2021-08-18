@@ -455,7 +455,8 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
 
       // check max velocity
       ROS_WARN_STREAM("bridgae_seg max vel [" << joint_id << "] " << bridge_seg.max_vel());
-      if (std::fabs(bridge_seg.max_vel()) > (*options.vel_limits)[joint_id]) {
+      if (std::fabs(bridge_seg.max_vel()) > (*options.vel_limits)[joint_id])
+      {
         adjust_time_from_start = true;
         // calc possiable adjutsted time from start
         // keep feasiable min time_from_start_adjusted
