@@ -450,18 +450,21 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
 
       // Add segment bridging current and new trajectories to result
       // todo adjust first_new_time
+      // here use this segment in 1dof, but if can be used as multiple dof
       Segment bridge_seg(last_curr_time, last_curr_state,
                          first_new_time, first_new_state);
 
       // check max velocity
-      ROS_WARN_STREAM("bridgae_seg max vel [" << joint_id << "] " << bridge_seg.max_vel());
-      if (std::fabs(bridge_seg.max_vel()) > (*options.vel_limits)[joint_id])
+      bridge_seg.calcMaxVelocities();
+      ROS_WARN_STREAM("bridgae_seg max vel [" << joint_id << "] " << bridge_seg.getMaxVelocities()[0]);
+      if (std::fabs(bridge_seg.getMaxVelocities()[0]) > (*options.vel_limits)[joint_id])
       {
         adjust_time_from_start = true;
         // calc possiable adjutsted time from start
         // keep feasiable min time_from_start_adjusted
         Scalar old_duration = first_new_time - last_curr_time;
-        Scalar new_duration = bridge_seg.calcDurationUnderVelLimit((*options.vel_limits)[joint_id]);
+        std::vector<Scalar> limits(1, (*options.vel_limits)[joint_id]);
+        Scalar new_duration = bridge_seg.calcDurationUnderVelLimit(limits);
         extend_duration = std::max(extend_duration, new_duration - old_duration);
         ROS_WARN_STREAM("tf origin " <<  (it->time_from_start).toSec());
         ROS_WARN_STREAM("old duration " << old_duration <<  "new duration " << new_duration << "extend " << extend_duration);
