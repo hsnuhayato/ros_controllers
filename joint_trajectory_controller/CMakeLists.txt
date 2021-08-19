@@ -58,6 +58,8 @@ add_library(${PROJECT_NAME} src/joint_trajectory_controller.cpp
                             include/joint_trajectory_controller/init_joint_trajectory.h
                             include/joint_trajectory_controller/joint_trajectory_controller.h
                             include/joint_trajectory_controller/joint_trajectory_controller_impl.h
+                            include/joint_trajectory_controller/gitai_joint_trajectory_controller.h
+                            include/joint_trajectory_controller/gitai_joint_trajectory_controller_impl.h
                             include/joint_trajectory_controller/joint_trajectory_msg_utils.h
                             include/joint_trajectory_controller/joint_trajectory_segment.h
                             include/joint_trajectory_controller/tolerances.h

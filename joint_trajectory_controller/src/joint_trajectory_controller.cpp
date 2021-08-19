@@ -32,6 +32,7 @@
 // Project
 #include <trajectory_interface/quintic_spline_segment.h>
 #include <joint_trajectory_controller/joint_trajectory_controller.h>
+#include <joint_trajectory_controller/gitai_joint_trajectory_controller.h>
 
 namespace position_controllers
 {
@@ -43,6 +44,7 @@ namespace position_controllers
                                                                  hardware_interface::PositionJointInterface>
           JointTrajectoryController;
 }
+
 
 namespace velocity_controllers
 {
@@ -88,8 +90,68 @@ namespace pos_vel_acc_controllers
           JointTrajectoryController;
 }
 
+namespace position_controllers
+{
+  /**
+   * \brief Joint trajectory controller that represents trajectory segments as <b>quintic splines</b> and sends
+   * commands to a \b position interface.
+   */
+  typedef joint_trajectory_controller::GitaiJointTrajectoryController<trajectory_interface::QuinticSplineSegment<double>,
+                                                                      hardware_interface::PositionJointInterface>
+          GitaiJointTrajectoryController;
+}
+namespace velocity_controllers
+{
+  /**
+   * \brief Joint trajectory controller that represents trajectory segments as <b>quintic splines</b> and sends
+   * commands to a \b velocity interface.
+   */
+  typedef joint_trajectory_controller::GitaiJointTrajectoryController<trajectory_interface::QuinticSplineSegment<double>,
+                                                                      hardware_interface::VelocityJointInterface>
+          GitaiJointTrajectoryController;
+}
+
+namespace effort_controllers
+{
+  /**
+   * \brief Joint trajectory controller that represents trajectory segments as <b>quintic splines</b> and sends
+   * commands to an \b effort interface.
+   */
+  typedef joint_trajectory_controller::GitaiJointTrajectoryController<trajectory_interface::QuinticSplineSegment<double>,
+                                                                      hardware_interface::EffortJointInterface>
+          GitaiJointTrajectoryController;
+}
+
+namespace pos_vel_controllers
+{
+  /**
+   * \brief Joint trajectory controller that represents trajectory segments as <b>quintic splines</b> and sends
+   * commands to an \b pos_vel interface.
+   */
+  typedef joint_trajectory_controller::GitaiJointTrajectoryController<trajectory_interface::QuinticSplineSegment<double>,
+                                                                      hardware_interface::PosVelJointInterface>
+          GitaiJointTrajectoryController;
+}
+
+namespace pos_vel_acc_controllers
+{
+  /**
+   * \brief Joint trajectory controller that represents trajectory segments as <b>quintic splines</b> and sends
+   * commands to a \b pos_vel_acc interface.
+   */
+  typedef joint_trajectory_controller::GitaiJointTrajectoryController<trajectory_interface::QuinticSplineSegment<double>,
+                                                                      hardware_interface::PosVelAccJointInterface>
+          GitaiJointTrajectoryController;
+}
+
 PLUGINLIB_EXPORT_CLASS(position_controllers::JointTrajectoryController, controller_interface::ControllerBase)
 PLUGINLIB_EXPORT_CLASS(velocity_controllers::JointTrajectoryController, controller_interface::ControllerBase)
 PLUGINLIB_EXPORT_CLASS(effort_controllers::JointTrajectoryController,   controller_interface::ControllerBase)
 PLUGINLIB_EXPORT_CLASS(pos_vel_controllers::JointTrajectoryController,   controller_interface::ControllerBase)
 PLUGINLIB_EXPORT_CLASS(pos_vel_acc_controllers::JointTrajectoryController,   controller_interface::ControllerBase)
+
+PLUGINLIB_EXPORT_CLASS(position_controllers::GitaiJointTrajectoryController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(velocity_controllers::GitaiJointTrajectoryController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(effort_controllers::GitaiJointTrajectoryController,   controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(pos_vel_controllers::GitaiJointTrajectoryController,   controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(pos_vel_acc_controllers::GitaiJointTrajectoryController,   controller_interface::ControllerBase)
