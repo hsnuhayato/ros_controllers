@@ -56,6 +56,7 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} src/joint_trajectory_controller.cpp
                             include/joint_trajectory_controller/hardware_interface_adapter.h
                             include/joint_trajectory_controller/init_joint_trajectory.h
+                            include/joint_trajectory_controller/gitai_init_joint_trajectory.h
                             include/joint_trajectory_controller/joint_trajectory_controller.h
                             include/joint_trajectory_controller/joint_trajectory_controller_impl.h
                             include/joint_trajectory_controller/gitai_joint_trajectory_controller.h
