@@ -204,7 +204,7 @@ bool isNotEmpty(typename Trajectory::value_type trajPerJoint)
 // TODO: Return useful bits of current trajectory if input msg is useless?
 template <class Trajectory>
 Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg,
-                               const ros::Time&                              time, //time is next_update_time
+                               const ros::Time&                              time,
                                const InitJointTrajectoryOptions<Trajectory>& options =
                                InitJointTrajectoryOptions<Trajectory>())
 {
@@ -500,9 +500,9 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       const TrajectoryPerJoint& curr_joint_traj = (*options.current_trajectory)[joint_id];
 
       // Get the last time and state that will be executed from the current trajectory
-      const typename Segment::Time last_curr_time = std::max(o_msg_start_time.toSec(), o_time.toSec()); // Important!  if duration is minus, than return o_time(=next_update_uptime)
+      const typename Segment::Time last_curr_time = std::max(o_msg_start_time.toSec(), o_time.toSec()); // Important!
       typename Segment::State last_curr_state;
-      sample(curr_joint_traj, last_curr_time, last_curr_state);// state on next_update_uptime
+      sample(curr_joint_traj, last_curr_time, last_curr_state);
 
       // Get the first time and state that will be executed from the new trajectory
       trajectory_msgs::JointTrajectoryPoint point_per_joint;
@@ -511,12 +511,7 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       if (!it->accelerations.empty()) {point_per_joint.accelerations.resize(1, it->accelerations[msg_joint_it]);}
       point_per_joint.time_from_start = it->time_from_start;
 
-      // todo::adjust time_from_start here, and postpone all trajectorypoint in msg after first_new_time
-      typename Segment::Time first_new_time = o_msg_start_time.toSec() + (it->time_from_start).toSec();
-      if (adjust_time_from_start) {
-         first_new_time += extend_duration;
-       }
-
+      const typename Segment::Time first_new_time = o_msg_start_time.toSec() + (it->time_from_start).toSec();
       typename Segment::State first_new_state(point_per_joint); // Here offsets are not yet applied
 
       // Compute offsets due to wrapping joints
@@ -578,7 +573,7 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       if (!next_it->velocities.empty()) {next_it_point_per_joint.velocities.resize(1, next_it->velocities[msg_joint_it]);}
       if (!next_it->accelerations.empty()) {next_it_point_per_joint.accelerations.resize(1, next_it->accelerations[msg_joint_it]);}
       next_it_point_per_joint.time_from_start = next_it->time_from_start;
-      // todo::adjust time_from_start
+
       Segment segment(o_msg_start_time, it_point_per_joint, next_it_point_per_joint, position_offset);
       segment.setGoalHandle(options.rt_goal_handle);
       if (has_rt_goal_handle) {segment.setTolerances(tolerances_per_joint);}
@@ -596,15 +591,13 @@ Trajectory initJointTrajectory(const trajectory_msgs::JointTrajectory&       msg
       log_str << "\n- 1 segment added for transitioning between the current trajectory and first point of the input message.";
       if (num_new_segments > 0) {log_str << "\n- " << num_new_segments << " new segments (" << (num_new_segments + 1) <<
                                  " points) taken from the input trajectory.";}
-      log_str << "\nres1: " << result_traj_per_joint[0].startTime() << " " <<  result_traj_per_joint[0].endTime() <<
-          "\nres2: " << result_traj_per_joint[1].startTime() << " " <<  result_traj_per_joint[1].endTime();
     }
     else {log_str << ".";}
     ROS_DEBUG_STREAM(log_str.str());
 
     if (result_traj_per_joint.size() > 0)
       result_traj[joint_id] = result_traj_per_joint;
-  }//////////Iterate through the joints that are in the message, in the order of the mapping vector
+  }
 
   // If the trajectory for all joints is empty, empty the trajectory vector
   typename Trajectory::const_iterator trajIter = std::find_if (result_traj.begin(), result_traj.end(), isNotEmpty<Trajectory>);

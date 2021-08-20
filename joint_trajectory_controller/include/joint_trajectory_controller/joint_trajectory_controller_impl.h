@@ -166,10 +166,6 @@ template <class SegmentImpl, class HardwareInterface>
 inline void JointTrajectoryController<SegmentImpl, HardwareInterface>::
 trajectoryCommandCB(const JointTrajectoryConstPtr& msg)
 {
-  //const auto now = ros::Time::now();
-  //ROS_INFO("The received time is %f and stamp is %f, diff is %f",
-  //         now.toSec(), msg->header.stamp.toSec(), (now - msg->header.stamp).toSec());
-
   const bool update_ok = updateTrajectoryCommand(msg, RealtimeGoalHandlePtr());
   if (update_ok) {preemptActiveGoal();}
 }
@@ -831,7 +827,7 @@ JointTrajectoryController<SegmentImpl, HardwareInterface>::createHoldTrajectory(
   {
     default_joint_state.position[0]= default_state.position[i];
     default_joint_state.velocity[0]= default_state.velocity[i];
-    Segment hold_segment(0.0, default_joint_state, 0.0, default_joint_state); //start time, start state, end time, end state
+    Segment hold_segment(0.0, default_joint_state, 0.0, default_joint_state);
 
     TrajectoryPerJoint joint_segment;
     joint_segment.resize(1, hold_segment);
